@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Buscar Caronas</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; color: #333; margin: 0; padding: 20px; }
+        .container { max-width: 600px; margin: 0 auto; background: #ffffff; padding: 25px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 8px; font-weight: 600; color: #555; }
+        input, select { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; }
+        .btn { background-color: #0056b3; color: white; padding: 12px 15px; border: none; border-radius: 6px; cursor: pointer; width: 100%; font-size: 16px; font-weight: bold; transition: background-color 0.3s ease; }
+        .btn:hover { background-color: #004494; }
+        .card-carona { border: 1px solid #e0e0e0; padding: 20px; border-radius: 8px; margin-top: 20px; background: #fafafa; transition: transform 0.2s ease; }
+        .card-carona:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.05); }
+        .btn-match { background-color: #28a745; margin-top: 15px; }
+        .btn-match:hover { background-color: #218838; }
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); align-items: center; justify-content: center; }
+        .modal-content { background: white; padding: 25px; border-radius: 10px; text-align: center; max-width: 400px; width: 90%; }
+        .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+        .modal-actions .btn { flex: 1; margin: 0; }
+        .btn-cancel { background-color: #dc3545; }
+        .btn-cancel:hover { background-color: #c82333; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Encontrar carona</h2>
+    
+    <form method="GET" action="{% url 'busca_carona' %}">
+        <div class="form-group">
+            <label for="origem">Origem:</label>
+            <input type="text" id="origem" name="origem" required placeholder="Ex: Centro">
+        </div>
+        <div class="form-group">
+            <label for="destino">Destino:</label>
+            <input type="text" id="destino" name="destino" required placeholder="Ex: Campus JK">
+        </div>
+        <div class="form-group">
+            <label for="data">Data da Viagem:</label>
+            <input type="date" id="data" name="data" required>
+        </div>
+        <button type="submit" class="btn">Buscar caronas</button>
+    </form>
+
+    {% if caronas is not None %}
+        <h3 style="margin-top: 30px;">Resultados:</h3>
+        {% if caronas %}
+            {% for carona in caronas %}
+                <div class="card-carona">
+                    <p><strong>Trajeto:</strong> {{ carona.origem }} ➔ {{ carona.destino }}</p>
+                    <p><strong>Data:</strong> {{ carona.data|date:"d/m/Y" }}</p>
+                    <p><strong>Horário de saída:</strong> {{ carona.horario_saida|time:"H:i" }}</p>
+                    <p><strong>Vagas disponíveis:</strong> {{ carona.vagas_disponiveis }}</p>
+                    <p><strong>Ponto de encontro:</strong> {{ carona.ponto_encontro }}</p>
+                    
+                    <form method="POST" action="{% url 'confirmar_match' carona.id %}" class="form-match">
+                        {% csrf_token %}
+                        <button type="button" class="btn btn-match btn-abrir-modal">Confirmar vaga</button>
+                    </form>
+                </div>
+            {% endfor %}
+        {% else %}
+            <p>Nenhuma carona encontrada para esta data e trajeto.</p>
+        {% endif %}
+    {% endif %}
+</div>
+
+<!-- Modal de Confirmação -->
+<div id="modal-confirmacao" class="modal-overlay">
+    <div class="modal-content">
+        <h3>Confirmar carona?</h3>
+        <p>Você está prestes a reservar uma vaga neste veículo. Deseja continuar?</p>
+        <div class="modal-actions">
+            <button id="btn-cancelar-modal" class="btn btn-cancel">Cancelar</button>
+            <button id="btn-confirmar-modal" class="btn btn-match">Sim, confirmar</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const botoesAbrirModal = document.querySelectorAll('.btn-abrir-modal');
+        const modal = document.getElementById('modal-confirmacao');
+        const btnConfirmar = document.getElementById('btn-confirmar-modal');
+        const btnCancelar = document.getElementById('btn-cancelar-modal');
+        let formularioAtual = null;
+
+        botoesAbrirModal.forEach(botao => {
+            botao.addEventListener('click', function(event) {
+                formularioAtual = this.closest('form');
+                modal.style.display = 'flex';
+            });
+        });
+
+        btnCancelar.addEventListener('click', function() {
+            modal.style.display = 'none';
+            formularioAtual = null;
+        });
+
+        btnConfirmar.addEventListener('click', function() {
+            if (formularioAtual) {
+                formularioAtual.submit();
+            }
+        });
+    });
+</script>
+
+</body>
+</html>
