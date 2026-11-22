@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Pagamento da Carona</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; color: #333; margin: 0; padding: 20px; }
+        .container { max-width: 600px; margin: 0 auto; background: #ffffff; padding: 25px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        .resumo-carona { border: 1px solid #e0e0e0; padding: 18px; border-radius: 8px; background: #fafafa; margin-bottom: 20px; }
+        .resumo-carona p { margin: 6px 0; }
+        .valor-destaque { font-size: 20px; font-weight: bold; color: #0056b3; margin-top: 10px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 8px; font-weight: 600; color: #555; }
+        input, select { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; }
+        .painel-metodo { border: 1px dashed #bbb; background: #f9fbfd; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+        .pix-codigo { background: #eee; padding: 10px; border-radius: 6px; font-family: monospace; font-size: 13px; word-break: break-all; margin: 10px 0; }
+        .grid-cartao { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .btn { background-color: #28a745; color: white; padding: 12px 15px; border: none; border-radius: 6px; cursor: pointer; width: 100%; font-size: 16px; font-weight: bold; transition: background-color 0.3s ease; }
+        .btn:hover { background-color: #218838; }
+        .btn-secundario { background-color: #0056b3; margin-top: 8px; padding: 8px 12px; font-size: 14px; }
+        .btn-secundario:hover { background-color: #004494; }
+        .link-voltar { display: inline-block; margin-top: 15px; color: #555; text-decoration: none; font-size: 14px; }
+        .link-voltar:hover { text-decoration: underline; }
+        .oculto { display: none; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Finalizar Pagamento</h2>
+
+    <div class="resumo-carona">
+        <p><strong>Trajeto:</strong> {{ carona.origem }} ➔ {{ carona.destino }}</p>
+        <p><strong>Data:</strong> {{ carona.data|date:"d/m/Y" }} às {{ carona.horario_saida|time:"H:i" }}</p>
+        <p><strong>Ponto de encontro:</strong> {{ carona.ponto_encontro }}</p>
+        <p class="valor-destaque">Total a pagar: R$ {{ valor }}</p>
+    </div>
+
+    <form method="POST" action="{% url 'realizar_pagamento' carona.id %}">
+        {% csrf_token %}
+
+        <div class="form-group">
+            <label for="nome_pagador">Nome do Passageiro:</label>
+            <input type="text" id="nome_pagador" name="nome_pagador" value="{{ nome_sugerido }}" required placeholder="Digite seu nome completo">
+        </div>
+
+        <div class="form-group">
+            <label for="metodo">Forma de Pagamento:</label>
+            <select id="metodo" name="metodo">
+                <option value="PIX">Pix (Confirmação imediata)</option>
+                <option value="CARTAO">Cartão de Crédito</option>
+                <option value="DINHEIRO">Dinheiro (Pagar ao motorista no embarque)</option>
+            </select>
+        </div>
+
+        <div id="box-pix" class="painel-metodo">
+            <strong>Pix Copia e Cola (Simulação PoC):</strong>
+            <div class="pix-codigo" id="codigo-pix">00020126360014BR.GOV.BCB.PIX0114carona@ufvjm.br520400005303986540515.005802BR5913CARONA_UNIV6010DIAMANTINA62070503***6304A1B2</div>
+            <button type="button" id="btn-copiar-pix" class="btn btn-secundario">Copiar código Pix</button>
+        </div>
+
+        <div id="box-cartao" class="painel-metodo oculto">
+            <div class="form-group">
+                <label for="numero_cartao">Número do Cartão:</label>
+                <input type="text" id="numero_cartao" maxlength="19" placeholder="0000 0000 0000 0000">
+            </div>
+            <div class="grid-cartao">
+                <div class="form-group">
+                    <label for="validade_cartao">Validade:</label>
+                    <input type="text" id="validade_cartao" maxlength="5" placeholder="MM/AA">
+                </div>
+                <div class="form-group">
+                    <label for="cvv_cartao">CVV:</label>
+                    <input type="text" id="cvv_cartao" maxlength="3" placeholder="123">
+                </div>
+            </div>
+        </div>
+
+        <div id="box-dinheiro" class="painel-metodo oculto">
+            <p style="margin: 0;">A reserva ficará registrada como <strong>Pendente</strong> e o pagamento será feito diretamente ao motorista no ponto de encontro.</p>
+        </div>
+
+        <button type="submit" id="btn-submit" class="btn">Confirmar Pagamento via Pix</button>
+    </form>
+
+    <a href="{% url 'busca_carona' %}" class="link-voltar">← Voltar para a busca de caronas</a>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const selectMetodo = document.getElementById('metodo');
+        const boxPix = document.getElementById('box-pix');
+        const boxCartao = document.getElementById('box-cartao');
+        const boxDinheiro = document.getElementById('box-dinheiro');
+        const btnSubmit = document.getElementById('btn-submit');
+        const btnCopiarPix = document.getElementById('btn-copiar-pix');
+        const camposCartao = [
+            document.getElementById('numero_cartao'),
+            document.getElementById('validade_cartao'),
+            document.getElementById('cvv_cartao')
+        ];
+
+        function atualizarInterfacePagamento() {
+            const metodo = selectMetodo.value;
+            boxPix.classList.add('oculto');
+            boxCartao.classList.add('oculto');
+            boxDinheiro.classList.add('oculto');
+
+            camposCartao.forEach(campo => campo.required = false);
+
+            if (metodo === 'PIX') {
+                boxPix.classList.remove('oculto');
+                btnSubmit.textContent = 'Confirmar Pagamento via Pix';
+            } else if (metodo === 'CARTAO') {
+                boxCartao.classList.remove('oculto');
+                camposCartao.forEach(campo => campo.required = true);
+                btnSubmit.textContent = 'Pagar com Cartão';
+            } else {
+                boxDinheiro.classList.remove('oculto');
+                btnSubmit.textContent = 'Confirmar Reserva (Pagar na Hora)';
+            }
+        }
+
+        selectMetodo.addEventListener('change', atualizarInterfacePagamento);
+
+        btnCopiarPix.addEventListener('click', function() {
+            const codigo = document.getElementById('codigo-pix').textContent;
+            navigator.clipboard.writeText(codigo);
+            btnCopiarPix.textContent = 'Código copiado!';
+            setTimeout(() => { btnCopiarPix.textContent = 'Copiar código Pix'; }, 2000);
+        });
+    });
+</script>
+
+</body>
+</html>
