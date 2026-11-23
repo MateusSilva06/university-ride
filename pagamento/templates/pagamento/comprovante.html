@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Comprovante de Pagamento</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; color: #333; margin: 0; padding: 20px; }
+        .container { max-width: 600px; margin: 0 auto; background: #ffffff; padding: 25px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        .badge { display: inline-block; padding: 6px 12px; border-radius: 20px; font-weight: bold; font-size: 14px; margin-bottom: 15px; }
+        .badge-pago { background-color: #d4edda; color: #155724; }
+        .badge-pendente { background-color: #fff3cd; color: #856404; }
+        .detalhes { border: 1px solid #e0e0e0; padding: 20px; border-radius: 8px; background: #fafafa; margin-bottom: 20px; }
+        .detalhes p { margin: 8px 0; }
+        .btn { display: block; text-align: center; text-decoration: none; background-color: #0056b3; color: white; padding: 12px 15px; border-radius: 6px; font-size: 16px; font-weight: bold; }
+        .btn:hover { background-color: #004494; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Registro Concluído</h2>
+
+    {% if pagamento.status == 'PAGO' %}
+        <span class="badge badge-pago">Status: {{ pagamento.get_status_display }}</span>
+    {% else %}
+        <span class="badge badge-pendente">Status: {{ pagamento.get_status_display }}</span>
+    {% endif %}
+
+    <div class="detalhes">
+        <p><strong>Comprovante Nº:</strong> #{{ pagamento.id }}</p>
+        <p><strong>Passageiro:</strong> {{ pagamento.nome_pagador }}</p>
+        <p><strong>Trajeto:</strong> {{ pagamento.carona.origem }} ➔ {{ pagamento.carona.destino }}</p>
+        <p><strong>Data da Carona:</strong> {{ pagamento.carona.data|date:"d/m/Y" }} às {{ pagamento.carona.horario_saida|time:"H:i" }}</p>
+        <p><strong>Método:</strong> {{ pagamento.get_metodo_display }}</p>
+        <p><strong>Valor:</strong> R$ {{ pagamento.valor }}</p>
+        <p><strong>Registrado em:</strong> {{ pagamento.criado_em|date:"d/m/Y H:i" }}</p>
+    </div>
+
+    <a href="{% url 'busca_carona' %}" class="btn">Voltar para Buscar Caronas</a>
+</div>
+
+</body>
+</html>
